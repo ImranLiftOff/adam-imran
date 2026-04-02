@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "https://www.notion.so/Adam-Imran-2f68a71bd63b81c49d1cdff0f19f97d6",
+      "permanent": false
+    }
+  ]
+}
