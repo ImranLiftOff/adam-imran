@@ -2,7 +2,7 @@
 Pipeline orchestrator. Run directly for manual/one-off execution:
   python main.py
 
-Called by APScheduler in server.py at 5:45 AM WAT daily.
+Called by APScheduler in server.py at 5:45 AM and 4:00 PM WAT daily.
 """
 
 import asyncio
@@ -97,9 +97,12 @@ async def run_pipeline() -> dict | None:
 
     # ── 5. Generate narrative ─────────────────────────────────────────────────
     date_label = now.strftime("%A, %B %-d")
+    period     = "morning" if now.hour < 12 else "evening"
     narrator_ctx = {
         "day_of_week":      day_name,
         "date_label":       date_label,
+        "period":           period,
+        "run_time_label":   now.strftime("%-I:%M %p WAT"),
         "level":            score_result["level"],
         "score":            score_result["final_score"],
         "base_score":       score_result["base_score"],
@@ -119,8 +122,8 @@ async def run_pipeline() -> dict | None:
     ) or (None, True)
 
     if narrative is None:
-        from narrator import FALLBACK_NARRATIVES
-        narrative    = FALLBACK_NARRATIVES.get(score_result["level"], FALLBACK_NARRATIVES["Moderate"])
+        from narrator import get_fallback_narrative
+        narrative    = get_fallback_narrative(score_result["level"], period)
         used_fallback = True
 
     logger.info("Narrative ready (fallback=%s): %.80s...", used_fallback, narrative)
@@ -220,7 +223,7 @@ def _build_areas(level: str, signals: list[dict], flood_zones: list[dict]) -> li
 
     # Default corridors by level
     defaults = {
-        "Gridlock": ["Third Mainland Bridge", "Lekki-Epe Expressway (Sangotedo–Ajah)", "Oshodi-Apapa Expressway", "Ikorodu Road"],
+        "Gridlock": ["Third Mainland Bridge", "Lekki-Epe Expressway (Sangotedo-Ajah)", "Oshodi-Apapa Expressway", "Ikorodu Road"],
         "Severe":   ["Third Mainland Bridge", "Lekki-Epe Expressway", "Oshodi-Apapa Expressway"],
         "Heavy":    ["Third Mainland Bridge", "Lekki-Epe Expressway", "Ikorodu Road"],
         "Moderate": ["Third Mainland Bridge", "Lagos Island corridors"],

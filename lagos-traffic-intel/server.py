@@ -1,6 +1,6 @@
 """
 FastAPI web server. Entry point for Railway.
-APScheduler runs the pipeline at 5:45 AM WAT daily inside the server process.
+APScheduler runs the pipeline at 5:45 AM and 4:00 PM WAT daily inside the server process.
 """
 
 import asyncio
@@ -23,19 +23,22 @@ from telegram import get_subscriber_count
 LAGOS_TZ = pytz.timezone("Africa/Lagos")
 
 # Cached subscriber count — refreshed every 6 hours to avoid hitting Telegram on every request
-_subscriber_cache: dict = {"count": None, "fetched_at": None}
+_subscriber_cache: dict = {"total": None, "new_today": None, "fetched_at": None}
 
 
 async def _refresh_subscribers():
-    count = await get_subscriber_count()
-    _subscriber_cache["count"] = count
+    result = await get_subscriber_count()
+    if result:
+        _subscriber_cache["total"] = result["total"]
+        _subscriber_cache["new_today"] = result["new_today"]
     _subscriber_cache["fetched_at"] = datetime.now(LAGOS_TZ).isoformat()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     scheduler = AsyncIOScheduler(timezone=LAGOS_TZ)
-    scheduler.add_job(run_pipeline, "cron", hour=5, minute=45, id="daily_pipeline")
+    scheduler.add_job(run_pipeline, "cron", hour=5, minute=45, id="morning_pipeline")
+    scheduler.add_job(run_pipeline, "cron", hour=16, minute=0, id="evening_pipeline")
     scheduler.add_job(_refresh_subscribers, "interval", hours=6, id="subscriber_refresh")
     scheduler.start()
 
@@ -91,11 +94,13 @@ async def api_history():
 
 @app.get("/api/subscribers")
 async def api_subscribers():
-    count = _subscriber_cache.get("count")
+    total     = _subscriber_cache.get("total")
+    new_today = _subscriber_cache.get("new_today")
     return {
-        "count": count,
+        "total": total,
+        "new_today": new_today,
         "fetched_at": _subscriber_cache.get("fetched_at"),
-        "display": f"{count:,} people subscribed" if count else "Join our community",
+        "display": f"{new_today:,} people subscribed today" if new_today is not None else "Join our community",
     }
 
 

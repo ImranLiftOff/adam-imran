@@ -4,25 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Daily Lagos traffic intelligence. Updated 5:45 AM every morning.">
-  <meta name="theme-color" content="#0D0B09">
+  <meta name="theme-color" content="#0D0B09" id="theme-color-meta">
   <meta property="og:title" content="Lagos Traffic Intel">
   <meta property="og:description" content="Is it worth leaving now?">
   <meta property="og:type" content="website">
   <title>Lagos Traffic Intel</title>
 
   <style>
-    /* Subset Bungee (OFL) to only the glyphs the status word needs: ACDEGHIKLMORSTVY.
-       ~1.5kb woff2, embedded so the display face never costs a network request. */
+    /* Subset Bungee (OFL) to only the glyphs the status word + tagline need.
+       ~2kb woff2, embedded so the display face never costs a network request. */
     @font-face {
       font-family: 'BungeeSubset';
       font-style: normal;
       font-weight: 400;
       font-display: swap;
-      src: url(data:font/woff2;base64,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) format('woff2');
-      unicode-range: U+0041-005A;
+      src: url(data:font/woff2;base64,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) format('woff2');
+      unicode-range: U+0020,U+003F,U+0041-005A,U+0061,U+0065,U+0067-0069,U+006C,U+006E-006F,U+0072-0074,U+0076-0077;
     }
 
-    /* Design tokens: Lagos, 5:45am, pre-dawn */
+    /* Design tokens: Lagos, 5:45am, pre-dawn (night = default) */
     :root {
       --ground:         #0D0B09;
       --ground-raised:  #18140F;
@@ -35,6 +35,7 @@
       --text-muted:     #A89C89;
       --text-faint:     #6E6355;
       --border:         rgba(245, 166, 35, 0.16);
+      --accent:         var(--amber);
       --glass:          #171E26;
       --flood-border:   rgba(230, 96, 60, 0.4);
       --flood-text:     #F0B69A;
@@ -42,6 +43,29 @@
       --font-serif:     Georgia, 'Times New Roman', serif;
       --font-sans:      system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       --current-level-color: var(--amber);
+      /* The hero plate (status word + vehicles) always stays this dark tone,
+         day or night: it's a status readout, not page chrome. */
+      --hero-ground:    #0D0B09;
+      --hero-raised:    #18140F;
+    }
+
+    /* Day mode: bright Lagos midday paper for the page chrome. The hero
+       plate keeps its own fixed dark tokens above so the status readout
+       never loses contrast, whichever mode the page is in. */
+    :root[data-mode="day"] {
+      --ground:         #F5EEDC;
+      --ground-raised:  #EBE1C6;
+      --ground-line:    #DBCCA3;
+      --amber-line:     rgba(159, 106, 15, 0.16);
+      --amber-line-soft:rgba(159, 106, 15, 0.08);
+      --text:           #241C12;
+      --text-muted:     #675838;
+      --text-faint:     #948357;
+      --border:         rgba(159, 106, 15, 0.3);
+      --accent:         #9A6A0F;
+      --flood-border:   rgba(180, 66, 40, 0.35);
+      --flood-text:     #7A3220;
+      --stale-border:   rgba(180, 66, 40, 0.3);
     }
 
     /* Reset */
@@ -55,7 +79,7 @@
       min-height: 100dvh;
       overflow-x: hidden;
     }
-    a { color: var(--amber); text-decoration: none; }
+    a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
     button { cursor: pointer; border: none; background: none; font: inherit; }
     @media (prefers-reduced-motion: reduce) {
@@ -109,14 +133,17 @@
 
     /* Header */
     .site-header {
-      padding: 22px 0 18px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      padding: 22px 0 20px;
       border-bottom: 1px solid var(--ground-line);
     }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .wordmark { display: flex; align-items: center; gap: 8px; min-width: 0; }
     .mark { flex-shrink: 0; display: block; }
-    .header-text { min-width: 0; }
     .site-name {
       font-size: 0.6875rem;
       font-weight: 700;
@@ -124,21 +151,38 @@
       text-transform: uppercase;
       color: var(--text-muted);
     }
-    .site-tagline {
-      font-family: var(--font-serif);
-      font-size: 1.0625rem;
-      font-style: italic;
+    .mode-toggle {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      color: var(--text-muted);
+      transition: color 0.15s, background 0.15s;
+    }
+    .mode-toggle:hover { color: var(--text); background: var(--amber-line-soft); }
+    .mode-toggle svg { display: none; }
+    :root:not([data-mode="day"]) .mode-toggle .icon-sun { display: block; }
+    :root[data-mode="day"] .mode-toggle .icon-moon { display: block; }
+
+    .site-headline {
+      font-family: 'BungeeSubset', var(--font-sans);
+      font-weight: 400;
+      font-size: clamp(1.375rem, 5.5vw, 1.75rem);
+      line-height: 1.2;
       color: var(--text);
-      margin-top: 3px;
+      margin-top: 14px;
     }
 
     /* Hero / status */
-    .hero-wrap { margin: 0 -24px; }
+    .hero-wrap { margin: 0 -24px; background: var(--hero-ground); }
     .hero {
       position: relative;
       overflow: hidden;
       padding: 34px 24px 0;
       isolation: isolate;
+      color: #F5EFE2;
     }
     .hero-glow {
       position: absolute;
@@ -171,12 +215,12 @@
     .badge-score {
       font-size: 0.8125rem;
       font-weight: 600;
-      color: var(--text-muted);
+      color: #A89C89;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       margin-top: 8px;
     }
-    .badge-score b { color: var(--text); font-weight: 700; }
+    .badge-score b { color: #F5EFE2; font-weight: 700; }
 
     /* Road strip + vehicles */
     .road-strip {
@@ -329,9 +373,9 @@
       transition: opacity 0.15s, transform 0.1s, background 0.15s;
     }
     .btn:active { transform: scale(0.985); }
-    .btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .btn-share {
-      background: transparent; color: var(--amber);
+      background: transparent; color: var(--accent);
       border: 1px solid var(--border);
     }
     .btn-share:hover { background: var(--amber-line-soft); }
@@ -347,7 +391,7 @@
     }
     .footer-left { line-height: 1.6; }
     .api-link { font-size: 0.6875rem; letter-spacing: 0.05em; font-weight: 600; color: var(--text-faint); }
-    .api-link:hover { color: var(--amber); }
+    .api-link:hover { color: var(--accent); }
 
     /* Loading shimmer */
     @keyframes shimmer { 0% { opacity: 0.4; } 50% { opacity: 0.9; } 100% { opacity: 0.4; } }
@@ -355,7 +399,7 @@
 
     @media (min-width: 600px) {
       .page { padding-top: 32px; }
-      .hero-wrap { border-radius: 10px; overflow: hidden; margin: 0 0; background: var(--ground-raised); }
+      .hero-wrap { border-radius: 10px; overflow: hidden; margin: 0 0; background: var(--hero-raised); }
     }
 
     /* Wide viewports get a real asymmetric split, not a centered mobile card:
@@ -402,19 +446,30 @@
     <div class="identity-col">
 
     <header class="site-header">
-      <svg class="mark" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
-        <rect x="2" y="9" width="26" height="14" rx="3" fill="#F5A623"/>
-        <rect x="6" y="12" width="18" height="5" rx="1" fill="#171E26"/>
-        <rect x="2" y="20" width="26" height="2.5" fill="#14110D"/>
-        <circle cx="9" cy="24" r="3.4" fill="#14110D"/>
-        <circle cx="21" cy="24" r="3.4" fill="#14110D"/>
-        <circle cx="9" cy="24" r="1.3" fill="#4A443A"/>
-        <circle cx="21" cy="24" r="1.3" fill="#4A443A"/>
-      </svg>
-      <div class="header-text">
-        <div class="site-name">Lagos Traffic Intel</div>
-        <div class="site-tagline">Is it worth leaving now?</div>
+      <div class="header-top">
+        <div class="wordmark">
+          <svg class="mark" width="26" height="26" viewBox="0 0 30 30" aria-hidden="true">
+            <rect x="2" y="9" width="26" height="14" rx="3" fill="#F5A623"/>
+            <rect x="6" y="12" width="18" height="5" rx="1" fill="#171E26"/>
+            <rect x="2" y="20" width="26" height="2.5" fill="#14110D"/>
+            <circle cx="9" cy="24" r="3.4" fill="#14110D"/>
+            <circle cx="21" cy="24" r="3.4" fill="#14110D"/>
+            <circle cx="9" cy="24" r="1.3" fill="#4A443A"/>
+            <circle cx="21" cy="24" r="1.3" fill="#4A443A"/>
+          </svg>
+          <span class="site-name">Lagos Traffic Intel</span>
+        </div>
+        <button class="mode-toggle" onclick="toggleMode()" aria-label="Toggle day/night mode">
+          <svg class="icon-sun" width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <circle cx="10" cy="10" r="4.2" fill="currentColor"/>
+            <path d="M10 1.5v2.4M10 16.1v2.4M18.5 10h-2.4M3.9 10H1.5M15.9 4.1l-1.7 1.7M5.8 14.2l-1.7 1.7M15.9 15.9l-1.7-1.7M5.8 5.8 4.1 4.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+          <svg class="icon-moon" width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M17.5 12.3A7.8 7.8 0 1 1 7.7 2.5a6.4 6.4 0 0 0 9.8 9.8Z" fill="currentColor"/>
+          </svg>
+        </button>
       </div>
+      <h1 class="site-headline">Is it worth leaving now?</h1>
     </header>
 
     <div class="hero-wrap">
@@ -529,7 +584,7 @@
 
     <div class="sub-section">
       <div class="sub-count" id="sub-count">
-        <span id="sub-number">...</span> people subscribed
+        <span id="sub-number">...</span> people subscribed today
       </div>
       <div class="btn-row">
         <button class="btn btn-share" id="share-btn" onclick="shareAlert()">
@@ -711,8 +766,8 @@
         const res = await fetch('/api/subscribers');
         if (!res.ok) throw new Error();
         const data = await res.json();
-        if (data.count && data.count > 0) {
-          $('sub-number').textContent = data.count.toLocaleString('en-NG');
+        if (data.new_today !== null && data.new_today !== undefined) {
+          $('sub-number').textContent = data.new_today.toLocaleString('en-NG');
         } else {
           $('sub-count').innerHTML = 'Join the community on Telegram';
         }
@@ -741,7 +796,23 @@
       } catch(_) {}
     }
 
+    // Day/night mode
+    function applyMode(mode) {
+      document.documentElement.setAttribute('data-mode', mode);
+      localStorage.setItem('lti_mode', mode);
+      $('theme-color-meta') && ($('theme-color-meta').content = mode === 'day' ? '#F5EEDC' : '#0D0B09');
+    }
+    function toggleMode() {
+      const current = document.documentElement.getAttribute('data-mode') === 'day' ? 'day' : 'night';
+      applyMode(current === 'day' ? 'night' : 'day');
+    }
+    function initMode() {
+      const saved = localStorage.getItem('lti_mode');
+      applyMode(saved === 'day' ? 'day' : 'night');
+    }
+
     // Init
+    initMode();
     fetchToday();
     fetchSubscribers();
     setInterval(fetchToday, 5 * 60 * 1000);

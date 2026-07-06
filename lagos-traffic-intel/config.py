@@ -140,7 +140,7 @@ FLOOD_ZONES: list[dict] = [
     },
     {
         "id": "ikorodu_road",
-        "name": "Ikorodu Road (Anthony–Odo-Iyalaro Bridge)",
+        "name": "Ikorodu Road (Anthony-Odo-Iyalaro Bridge)",
         "area": "Ikorodu Road",
         "tier": 2, "mm_threshold": 15, "hours_threshold": 4,
     },
@@ -172,11 +172,11 @@ FLOOD_ZONES: list[dict] = [
 
 # ── Day context strings (injected into narrator prompt) ────────────────────────
 DAY_CONTEXT: dict[str, str] = {
-    "monday":    "Monday rush — compressed weekend movement, full working week begins",
-    "tuesday":   "Midweek — standard Lagos rush hour density",
-    "wednesday": "Midweek — standard Lagos rush hour density",
-    "thursday":  "Late-week build — Thursday PM is Lagos's second-worst evening",
-    "friday":    "Friday — Lagos's heaviest traffic day, morning and evening both severe",
-    "saturday":  "Saturday — lighter commute but market and leisure traffic builds midday",
-    "sunday":    "Sunday — lightest day, church traffic the only notable window 9–12",
+    "monday":    "Monday rush: compressed weekend movement, full working week begins",
+    "tuesday":   "Midweek: standard Lagos rush hour density",
+    "wednesday": "Midweek: standard Lagos rush hour density",
+    "thursday":  "Late-week build: Thursday PM is Lagos's second-worst evening",
+    "friday":    "Friday: Lagos's heaviest traffic day, morning and evening both severe",
+    "saturday":  "Saturday: lighter commute but market and leisure traffic builds midday",
+    "sunday":    "Sunday: lightest day, church traffic the only notable window 9-12",
 }

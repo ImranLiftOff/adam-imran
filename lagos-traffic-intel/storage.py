@@ -65,8 +65,11 @@ def read_history() -> list[dict]:
         return []
 
 
+STALE_THRESHOLD_HOURS = 15  # pipeline runs at 5:45 and 16:00 WAT — max normal gap is ~13h45m
+
+
 def mark_stale(today_data: dict | None) -> bool:
-    """True if last run was more than 26 hours ago."""
+    """True if last run is older than the longest normal gap between the two daily runs."""
     if not today_data:
         return True
     gen = today_data.get("generated_at", "")
@@ -75,6 +78,6 @@ def mark_stale(today_data: dict | None) -> bool:
         if ts.tzinfo is None:
             ts = ts.replace(tzinfo=timezone.utc)
         age_hours = (datetime.now(timezone.utc) - ts).total_seconds() / 3600
-        return age_hours > 26
+        return age_hours > STALE_THRESHOLD_HOURS
     except (ValueError, TypeError):
         return True
