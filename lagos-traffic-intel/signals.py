@@ -17,7 +17,12 @@ SIGNAL_PATTERNS: list[tuple[re.Pattern, str, str, str]] = [
      "bridge_closure", "HIGH", "Lekki-Ikoyi / Carter Bridge"),
     (re.compile(r"(road|highway|expressway).{0,30}(flood|submerge|underwater|inundat)", re.I),
      "flooding_confirmed", "HIGH", "flooded road"),
-    (re.compile(r"(marathon|road race|governor.{0,15}procession|independence day parade)", re.I),
+    # Bare "marathon" collides with common Pidgin/slang idiom ("running a marathon"
+    # meaning broke/exhausted, nothing to do with roads) — require actual
+    # event-logistics language alongside it, not just the word.
+    (re.compile(r"(marathon|road race).{0,40}(route|road clos|diver|shut down)", re.I),
+     "major_event", "HIGH", "multiple routes"),
+    (re.compile(r"(governor.{0,15}procession|independence day parade)", re.I),
      "major_event", "HIGH", "multiple routes"),
     (re.compile(r"(fatal|multiple|serious).{0,20}accident.{0,30}(expressway|bridge|highway)", re.I),
      "accident", "HIGH", "expressway/bridge"),
@@ -79,4 +84,69 @@ def signals_to_text(signals: list[dict]) -> str:
     lines = []
     for s in signals[:5]:  # cap at 5 for prompt length
         lines.append(f"- [{s['severity']}] {s['type'].replace('_', ' ').title()}: {s['description']} (via {s['source']})")
+    return "\n".join(lines)
+
+
+# ── Structured corridor reports (@lagostraffic961) ──────────────────────────
+#
+# Lagos Traffic Radio 96.1FM posts a consistent, structured format several
+# times a day: "TRAFFIC UPDATE FROM {AREA}" / "TRAFFIC REPORT FROM {AREA}" /
+# "INCIDENT REPORT FROM {AREA}" followed by a plain-English body. This is
+# actual ground truth for named corridors, as opposed to SIGNAL_PATTERNS
+# above (which only catches discrete named events like bridge closures).
+# Parsing this directly is what lets the narrator say what's *actually*
+# being reported this run instead of falling back to generic day/hour
+# expectations.
+_CORRIDOR_HEADER_RE = re.compile(
+    r"^(TRAFFIC UPDATE|TRAFFIC REPORT|INCIDENT REPORT)\s*(?:FROM\s+([A-Z0-9,&/\s-]+?))?\s*\n+(.*)",
+    re.S,
+)
+_CLEAR_RE    = re.compile(r"\b(smooth|free[- ]flowing|calm|clear|encouraging|steady|orderly|seamless)\b", re.I)
+_BUSY_RE     = re.compile(r"\b(busy|slow|building|congest\w*|heavy|delay|gridlock|bumper)\b", re.I)
+_INCIDENT_RE = re.compile(r"\b(accident|broke?n? ?down|breakdown|trapped|blocked|collision|fault|fire|flood\w*)\b", re.I)
+
+
+def parse_corridor_reports(posts: list[dict]) -> list[dict]:
+    """
+    Parses @lagostraffic961-style structured posts into per-corridor status.
+    Returns one entry per real, dated report: {area, kind, status, text, posted_at}.
+    """
+    reports: list[dict] = []
+    for p in posts:
+        if p.get("error"):
+            continue
+        text = (p.get("text") or "").strip()
+        m = _CORRIDOR_HEADER_RE.match(text)
+        if not m:
+            continue
+        header, area, body = m.groups()
+        body = re.sub(r"\s+", " ", body).strip()
+        if not body:
+            continue
+        kind = "incident" if header == "INCIDENT REPORT" else "update"
+        if kind == "incident" or _INCIDENT_RE.search(body):
+            status = "incident"
+        elif _BUSY_RE.search(body):
+            status = "busy"
+        elif _CLEAR_RE.search(body):
+            status = "clear"
+        else:
+            status = "unclear"
+        reports.append({
+            "area":      (area or "Lagos").strip(" -/,"),
+            "kind":      kind,
+            "status":    status,
+            "text":      body[:280],
+            "posted_at": p.get("posted_at", ""),
+        })
+    return reports
+
+
+def corridor_reports_to_text(reports: list[dict]) -> str:
+    """Formats corridor reports for injection into the narrator prompt."""
+    if not reports:
+        return "No real-time corridor reports available this run — none were fetched or none parsed."
+    lines = []
+    for r in reports[:14]:  # cap for prompt length
+        lines.append(f"- [{r['status'].upper()}] {r['area']}: {r['text']}")
     return "\n".join(lines)

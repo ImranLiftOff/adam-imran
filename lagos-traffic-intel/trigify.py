@@ -3,13 +3,27 @@ Pulls results from two Trigify saved searches:
   - Lagos Traffic Keywords (keyword search)
   - @lagostraffic961 profile (Lagos Traffic Radio 96.1FM)
 Returns list of post dicts for signals.py to process.
+
+Endpoint and response shape verified directly against the live API on
+2026-07-06 (the old /api/searches/.../results and /api/search/.../posts
+guesses both 404'd, so this pipeline had never actually ingested a single
+real post before this fix):
+
+  GET https://api.trigify.io/v1/searches/{id}/results?limit=N
+  Authorization: Bearer <TRIGIFY_API_KEY>
+  -> {"success": true, "data": [
+       {"author": {"name", "username", ...},
+        "content": {"text", "url", "media": [...]},
+        "engagement": {"likes", "comments", "shares"},
+        "published_at", "collected_at", ...}, ...
+     ]}
 """
 
 import httpx
 from config import TRIGIFY_API_KEY, TRIGIFY_SEARCH_KEYWORDS, TRIGIFY_SEARCH_LAGOSTRAFFIC
 
-TRIGIFY_BASE = "https://api.trigify.io/api"
-MAX_POSTS = 25  # per search, last 24h is sufficient
+TRIGIFY_BASE = "https://api.trigify.io/v1"
+MAX_POSTS = 30  # per search
 
 
 def _headers() -> dict:
@@ -20,14 +34,11 @@ def _headers() -> dict:
 
 
 def _extract_posts(response_data: dict | list) -> list[dict]:
-    """
-    Normalise Trigify response into a flat list of post dicts.
-    Trigify may return {data: [...]} or a direct list — handle both.
-    """
+    """Normalise the real Trigify results response into a flat list of post dicts."""
     if isinstance(response_data, list):
         items = response_data
     elif isinstance(response_data, dict):
-        items = response_data.get("data", response_data.get("results", response_data.get("posts", [])))
+        items = response_data.get("data", [])
         if not isinstance(items, list):
             items = []
     else:
@@ -35,16 +46,13 @@ def _extract_posts(response_data: dict | list) -> list[dict]:
 
     posts: list[dict] = []
     for item in items[:MAX_POSTS]:
-        text = (
-            item.get("text") or item.get("content") or
-            item.get("post_text") or item.get("message") or ""
-        )
+        author  = item.get("author") or {}
+        content = item.get("content") or {}
         posts.append({
-            "text":       str(text)[:500],
-            "author":     item.get("author") or item.get("username") or item.get("handle") or "",
-            "posted_at":  item.get("created_at") or item.get("posted_at") or item.get("timestamp") or "",
-            "url":        item.get("url") or item.get("post_url") or item.get("link") or "",
-            "search_id":  item.get("_search_id", ""),
+            "text":       str(content.get("text", ""))[:600],
+            "author":     author.get("username") or author.get("name") or "",
+            "posted_at":  item.get("published_at", ""),
+            "url":        content.get("url", ""),
             "raw":        item,
         })
     return posts
@@ -61,17 +69,10 @@ async def fetch_trigify_posts() -> list[dict]:
     async with httpx.AsyncClient(headers=_headers(), timeout=20) as client:
         for search_id in search_ids:
             try:
-                # Try the results endpoint first
                 resp = await client.get(
                     f"{TRIGIFY_BASE}/searches/{search_id}/results",
                     params={"limit": MAX_POSTS},
                 )
-                if resp.status_code == 404:
-                    # Fallback path some Trigify versions use
-                    resp = await client.get(
-                        f"{TRIGIFY_BASE}/search/{search_id}/posts",
-                        params={"limit": MAX_POSTS},
-                    )
                 resp.raise_for_status()
                 data = resp.json()
                 posts = _extract_posts(data)

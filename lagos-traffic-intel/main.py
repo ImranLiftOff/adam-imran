@@ -17,7 +17,12 @@ from flood import assess_flood_zones
 from narrator import generate_narrative
 from scorer import full_score
 from scraper import scrape_all
-from signals import extract_signals, signals_to_text
+from signals import (
+    corridor_reports_to_text,
+    extract_signals,
+    parse_corridor_reports,
+    signals_to_text,
+)
 from storage import append_history, write_today
 from telegram import send_alert
 from trigify import fetch_trigify_posts
@@ -69,7 +74,8 @@ async def run_pipeline() -> dict | None:
 
     # ── 2. Extract signals ────────────────────────────────────────────────────
     signals = extract_signals(articles, tg_posts)
-    logger.info("Signals found: %d", len(signals))
+    corridor_reports = parse_corridor_reports(tg_posts)
+    logger.info("Signals found: %d | corridor reports parsed: %d", len(signals), len(corridor_reports))
 
     # ── 3. Score ──────────────────────────────────────────────────────────────
     day_name = now.strftime("%A").lower()
@@ -115,6 +121,7 @@ async def run_pipeline() -> dict | None:
         "season_label":     weather_data["season_label"],
         "flood_zones":      flood_zones,
         "signal_lines":     signals_to_text(signals),
+        "corridor_reports_text": corridor_reports_to_text(corridor_reports),
     }
 
     narrative, used_fallback = await _safe(
@@ -129,7 +136,7 @@ async def run_pipeline() -> dict | None:
     logger.info("Narrative ready (fallback=%s): %.80s...", used_fallback, narrative)
 
     # ── 6. Build areas_to_watch ───────────────────────────────────────────────
-    areas = _build_areas(score_result["level"], signals, flood_zones)
+    areas = _build_areas(score_result["level"], signals, flood_zones, corridor_reports)
 
     # ── 7. Assemble today.json ────────────────────────────────────────────────
     sources_attempted = ["open_meteo", "pulse_nigeria", "vanguard", "trigify_keywords", "trigify_lagostraffic961"]
@@ -175,6 +182,7 @@ async def run_pipeline() -> dict | None:
         },
         "flood_zones": flood_zones,
         "signals":     [s for s in signals if not s.get("error")][:10],
+        "corridor_reports": corridor_reports[:14],
         "meta": {
             "pipeline_version":    "1.0",
             "sources_attempted":   sources_attempted,
@@ -198,41 +206,58 @@ async def run_pipeline() -> dict | None:
     return today
 
 
-def _build_areas(level: str, signals: list[dict], flood_zones: list[dict]) -> list[str]:
+def _build_areas(level: str, signals: list[dict], flood_zones: list[dict],
+                  corridor_reports: list[dict] | None = None) -> list[str]:
     """
-    Build areas_to_watch list. Signal-derived routes first, then flood-zone areas,
-    then default high-traffic corridors for the score level.
+    Build areas_to_watch list, real reports first: confirmed incidents from
+    today's corridor reports, then busy corridors from the same reports, then
+    signal-derived routes, then flood-zone areas. Hardcoded per-level defaults
+    are the last resort, used only when nothing real was actually observed
+    this run — they describe what's *typical*, not what's happening now, and
+    should not be presented as if they were.
     """
     areas: list[str] = []
     seen: set[str]   = set()
 
-    # From confirmed signals
+    def _add(name: str) -> None:
+        if name not in seen and len(areas) < 5:
+            areas.append(name)
+            seen.add(name)
+
+    corridor_reports = corridor_reports or []
+
+    # Real incidents first
+    for r in corridor_reports:
+        if r.get("status") == "incident":
+            _add(r["area"])
+    # Then real busy corridors
+    for r in corridor_reports:
+        if r.get("status") == "busy":
+            _add(r["area"])
+
+    # From confirmed signals (news/keyword-search pattern matches)
     for s in signals:
         if s.get("severity") == "HIGH" and s.get("affected_route") and not s.get("error"):
             route = s["affected_route"]
-            if route not in seen and "multiple" not in route:
-                areas.append(route)
-                seen.add(route)
+            if "multiple" not in route:
+                _add(route)
 
     # From flood zones (tier 1 first)
     for z in flood_zones:
-        area = z["area"]
-        if area not in seen:
-            areas.append(z["name"].split("(")[0].strip())
-            seen.add(area)
+        _add(z["name"].split("(")[0].strip())
 
-    # Default corridors by level
-    defaults = {
-        "Gridlock": ["Third Mainland Bridge", "Lekki-Epe Expressway (Sangotedo-Ajah)", "Oshodi-Apapa Expressway", "Ikorodu Road"],
-        "Severe":   ["Third Mainland Bridge", "Lekki-Epe Expressway", "Oshodi-Apapa Expressway"],
-        "Heavy":    ["Third Mainland Bridge", "Lekki-Epe Expressway", "Ikorodu Road"],
-        "Moderate": ["Third Mainland Bridge", "Lagos Island corridors"],
-        "Light":    [],
-    }
-    for route in defaults.get(level, []):
-        if route not in seen and len(areas) < 5:
-            areas.append(route)
-            seen.add(route)
+    # Last resort: hardcoded typical corridors for this score level, only if
+    # nothing real filled the list yet.
+    if not areas:
+        defaults = {
+            "Gridlock": ["Third Mainland Bridge", "Lekki-Epe Expressway (Sangotedo-Ajah)", "Oshodi-Apapa Expressway", "Ikorodu Road"],
+            "Severe":   ["Third Mainland Bridge", "Lekki-Epe Expressway", "Oshodi-Apapa Expressway"],
+            "Heavy":    ["Third Mainland Bridge", "Lekki-Epe Expressway", "Ikorodu Road"],
+            "Moderate": ["Third Mainland Bridge", "Lagos Island corridors"],
+            "Light":    [],
+        }
+        for route in defaults.get(level, []):
+            _add(route)
 
     return areas[:5]
 
