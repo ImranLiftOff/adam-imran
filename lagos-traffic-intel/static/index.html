@@ -161,10 +161,8 @@
     }
     .vehicle { position: absolute; will-change: transform; }
     .vehicle svg { display: block; }
-    .sedan { top: 2px; width: 84px; animation: driveLeft 17s linear infinite; }
-    .bus   { bottom: 6px; width: 136px; z-index: 1; animation: driveRight 13s linear infinite; }
+    .bus { top: 12px; width: 136px; animation: driveRight 13s linear infinite; }
     @keyframes driveRight { from { transform: translateX(-40%); } to { transform: translateX(340%); } }
-    @keyframes driveLeft  { from { transform: translateX(340%) scaleX(-1); } to { transform: translateX(-40%) scaleX(-1); } }
 
     /* Date row */
     .date-row {
@@ -348,26 +346,6 @@
       <div class="badge-score" id="badge-score"><b>9</b> / 10</div>
 
       <div class="road-strip" aria-hidden="true">
-        <div class="vehicle sedan">
-          <svg viewBox="0 0 220 90" width="84" height="34">
-            <ellipse cx="105" cy="80" rx="95" ry="4" fill="#000" opacity="0.35"/>
-            <path d="M8 58 Q6 46 20 45 L52 45 C60 21 148 20 156 45 L198 45 C210 46 212 54 210 60 L210 68 Q210 75 202 75 L16 75 Q8 75 8 68 Z" fill="#241F19"/>
-            <path d="M14 58 Q13 50 22 49 L50 49 L46 58 Z" fill="#1A1611"/>
-            <path d="M62 43 C 70 28, 140 28, 148 43 L142 43 C 136 32, 74 32, 68 43 Z" fill="#14110D"/>
-            <path d="M68 43 C 74 30, 136 30, 142 43 L138 43 C133 33, 77 33, 72 43 Z" fill="#1B222B"/>
-            <path d="M72 41 C 90 33, 118 33, 136 41" stroke="#3A4552" stroke-width="1.5" fill="none" opacity="0.6"/>
-            <rect x="8" y="65" width="70" height="3" fill="#12100C" opacity="0.5"/>
-            <circle cx="55" cy="78" r="15" fill="#0A0908"/>
-            <circle cx="163" cy="78" r="15" fill="#0A0908"/>
-            <circle cx="55" cy="78" r="12.5" fill="#1A1712"/>
-            <circle cx="163" cy="78" r="12.5" fill="#1A1712"/>
-            <circle cx="55" cy="78" r="5" fill="#57503f"/>
-            <circle cx="163" cy="78" r="5" fill="#57503f"/>
-            <circle cx="13" cy="59" r="4.5" fill="#F5C065"/>
-            <rect x="205" y="53" width="6" height="5" rx="1" fill="#9C3A2C"/>
-            <rect x="46" y="38" width="7" height="3" rx="1" fill="#1A1611" transform="rotate(-18 46 38)"/>
-          </svg>
-        </div>
         <div class="vehicle bus">
           <svg viewBox="0 0 320 150" width="136" height="64">
             <ellipse cx="150" cy="132" rx="150" ry="6" fill="#000" opacity="0.4"/>
@@ -633,7 +611,7 @@
         const res = await fetch('/api/subscribers');
         if (!res.ok) throw new Error();
         const data = await res.json();
-        if (data.new_today !== null && data.new_today !== undefined) {
+        if (data.new_today) {
           $('sub-number').textContent = data.new_today.toLocaleString('en-NG');
         } else {
           $('sub-count').innerHTML = 'Join the community on Telegram';
