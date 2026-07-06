@@ -1,0 +1,6 @@
+data/today.json
+data/history.json
+logs/
+__pycache__/
+*.pyc
+.env

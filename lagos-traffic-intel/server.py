@@ -1,0 +1,162 @@
+"""
+FastAPI web server. Entry point for Railway.
+APScheduler runs the pipeline at 5:45 AM WAT daily inside the server process.
+"""
+
+import asyncio
+import os
+from contextlib import asynccontextmanager
+from datetime import datetime
+
+import pytz
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+from config import DELAY_MULTIPLIER, STATIC_DIR
+from main import run_pipeline
+from storage import mark_stale, read_history, read_today
+from telegram import get_subscriber_count
+
+LAGOS_TZ = pytz.timezone("Africa/Lagos")
+
+# Cached subscriber count — refreshed every 6 hours to avoid hitting Telegram on every request
+_subscriber_cache: dict = {"count": None, "fetched_at": None}
+
+
+async def _refresh_subscribers():
+    count = await get_subscriber_count()
+    _subscriber_cache["count"] = count
+    _subscriber_cache["fetched_at"] = datetime.now(LAGOS_TZ).isoformat()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler = AsyncIOScheduler(timezone=LAGOS_TZ)
+    scheduler.add_job(run_pipeline, "cron", hour=5, minute=45, id="daily_pipeline")
+    scheduler.add_job(_refresh_subscribers, "interval", hours=6, id="subscriber_refresh")
+    scheduler.start()
+
+    # Warm the subscriber cache on startup
+    asyncio.create_task(_refresh_subscribers())
+
+    yield
+    scheduler.shutdown(wait=False)
+
+
+app = FastAPI(title="Lagos Traffic Intel", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
+
+
+# ── Routes ─────────────────────────────────────────────────────────────────────
+
+@app.get("/health")
+async def health():
+    today = read_today()
+    return {
+        "ok": True,
+        "last_run": today.get("meta", {}).get("last_successful_run") if today else None,
+        "is_stale": mark_stale(today),
+    }
+
+
+@app.get("/api/today")
+async def api_today():
+    today = read_today()
+    if not today:
+        return JSONResponse({"error": "No data yet. Run the pipeline first."}, status_code=503)
+    today["meta"]["is_stale"] = mark_stale(today)
+    return today
+
+
+@app.get("/api/history")
+async def api_history():
+    return read_history()
+
+
+@app.get("/api/subscribers")
+async def api_subscribers():
+    count = _subscriber_cache.get("count")
+    return {
+        "count": count,
+        "fetched_at": _subscriber_cache.get("fetched_at"),
+        "display": f"{count:,} people subscribed" if count else "Join our community",
+    }
+
+
+@app.get("/api/embed")
+async def api_embed():
+    """Lightweight response for Shuttlers / ride-hailing integrations."""
+    today = read_today()
+    if not today:
+        return JSONResponse({"error": "No data yet."}, status_code=503)
+
+    traffic = today.get("traffic", {})
+    level   = traffic.get("level", "Moderate")
+    areas   = today.get("areas_to_watch", [])
+    flood   = today.get("flood_zones", [])
+
+    corridors = []
+    for area in areas:
+        corridors.append({
+            "name":       area,
+            "severity":   level.lower(),
+            "flood_risk": any(
+                z["name"].lower() in area.lower() or area.lower() in z["name"].lower()
+                for z in flood
+            ),
+        })
+
+    high_zones = [z["name"] for z in flood if z["confidence"] == "HIGH"]
+
+    return {
+        "provider":         "Lagos Traffic Intel",
+        "updated_at":       today.get("generated_at"),
+        "date_label":       today.get("date_label"),
+        "status": {
+            "level":    level,
+            "hex_color": traffic.get("hex_color"),
+            "summary":  traffic.get("narrative", "")[:200],
+        },
+        "affected_corridors":  corridors,
+        "delay_multiplier":    DELAY_MULTIPLIER.get(level, 1.0),
+        "flood_advisory": {
+            "active":               len(flood) > 0,
+            "zone_count":           len(flood),
+            "high_confidence_zones": high_zones,
+        },
+        "subscribe": {
+            "telegram":     "https://t.me/lagostrafficintel",
+            "channel_name": "Lagos Traffic Intel",
+        },
+        "is_stale": mark_stale(today),
+    }
+
+
+# ── Static files / SPA ────────────────────────────────────────────────────────
+
+os.makedirs(STATIC_DIR, exist_ok=True)
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.get("/")
+async def index():
+    html_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(html_path):
+        return FileResponse(html_path)
+    return JSONResponse({"error": "Landing page not found."}, status_code=404)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("server:app", host="0.0.0.0", port=port, reload=False)

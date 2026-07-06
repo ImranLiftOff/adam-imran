@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Daily Lagos traffic intelligence. Updated 5:45 AM every morning.">
+  <meta name="theme-color" id="theme-color-meta" content="#171410">
+  <meta property="og:title" content="Lagos Traffic Intel">
+  <meta property="og:description" content="Is it worth leaving now?">
+  <meta property="og:type" content="website">
+  <title>Lagos Traffic Intel</title>
+
+  <style>
+    /* ── Design tokens ──────────────────────────────────────────────────────── */
+    :root {
+      --bg:            #F5F3EF;
+      --surface:       #ECEAE4;
+      --border:        #D4CFC8;
+      --text:          #1C1712;
+      --text-muted:    #6B5E52;
+      --text-faint:    #9C9088;
+      --accent:        #B87333;
+      --accent-dim:    #8C5520;
+      --flood-bg:      #FFFBEB;
+      --flood-border:  #D97706;
+      --flood-text:    #78350F;
+      --stale-bg:      #FFF7F0;
+      --stale-border:  #FDA4AF;
+      --badge-text:    #FFFFFF;
+      --font-serif:    Georgia, 'Times New Roman', serif;
+      --font-sans:     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+      /* Traffic level colors */
+      --c-light:    #16A34A;
+      --c-moderate: #B45309;
+      --c-heavy:    #C2410C;
+      --c-severe:   #B91C1C;
+      --c-gridlock: #7F1D1D;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:          #171410;
+        --surface:     #221E1A;
+        --border:      #332E28;
+        --text:        #F2EFE8;
+        --text-muted:  #A39888;
+        --text-faint:  #6B5E52;
+        --accent:      #CF8B42;
+        --accent-dim:  #B87333;
+        --flood-bg:    #1C1505;
+        --flood-border:#B45309;
+        --flood-text:  #FDE68A;
+        --stale-bg:    #1C0F0A;
+        --stale-border:#9F1239;
+        --badge-text:  #FFFFFF;
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --bg:          #171410;
+      --surface:     #221E1A;
+      --border:      #332E28;
+      --text:        #F2EFE8;
+      --text-muted:  #A39888;
+      --text-faint:  #6B5E52;
+      --accent:      #CF8B42;
+      --accent-dim:  #B87333;
+      --flood-bg:    #1C1505;
+      --flood-border:#B45309;
+      --flood-text:  #FDE68A;
+      --stale-bg:    #1C0F0A;
+      --stale-border:#9F1239;
+      --badge-text:  #FFFFFF;
+    }
+
+    :root[data-theme="light"] {
+      --bg:          #F5F3EF;
+      --surface:     #ECEAE4;
+      --border:      #D4CFC8;
+      --text:        #1C1712;
+      --text-muted:  #6B5E52;
+      --text-faint:  #9C9088;
+      --accent:      #B87333;
+      --accent-dim:  #8C5520;
+      --flood-bg:    #FFFBEB;
+      --flood-border:#D97706;
+      --flood-text:  #78350F;
+      --stale-bg:    #FFF7F0;
+      --stale-border:#FDA4AF;
+      --badge-text:  #FFFFFF;
+    }
+
+    /* ── Reset ─────────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      min-height: 100dvh;
+      transition: background 0.2s, color 0.2s;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    button { cursor: pointer; border: none; background: none; font: inherit; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
+
+    /* ── Page shell ─────────────────────────────────────────────────────────── */
+    .page {
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 0 24px 48px;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────────────── */
+    .site-header {
+      padding: 20px 0 16px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .site-name {
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .site-tagline {
+      font-family: var(--font-serif);
+      font-size: 1.125rem;
+      font-style: italic;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .theme-toggle {
+      color: var(--text-faint);
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      padding: 4px 0;
+      opacity: 0.7;
+    }
+    .theme-toggle:hover { opacity: 1; color: var(--text-muted); }
+
+    /* ── Status badge ───────────────────────────────────────────────────────── */
+    /* Full-bleed via negative side margins */
+    .badge-wrap {
+      margin: 0 -24px;
+    }
+    .status-badge {
+      background: var(--c-severe);
+      padding: 28px 24px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: background 0.4s ease;
+    }
+    .badge-level {
+      font-family: var(--font-sans);
+      font-size: clamp(2.75rem, 14vw, 3.5rem);
+      font-weight: 800;
+      color: var(--badge-text);
+      line-height: 1;
+      letter-spacing: -0.02em;
+      /* letter-spacing is set dynamically per level in JS */
+    }
+    .badge-score {
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: rgba(255,255,255,0.65);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* ── Date row ───────────────────────────────────────────────────────────── */
+    .date-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+    }
+    .date-label {
+      font-family: var(--font-sans);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+    .updated-time {
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      color: var(--text-faint);
+      white-space: nowrap;
+    }
+
+    /* ── Stale warning ──────────────────────────────────────────────────────── */
+    .stale-notice {
+      background: var(--stale-bg);
+      border: 1px solid var(--stale-border);
+      border-radius: 4px;
+      padding: 10px 14px;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      margin-top: 16px;
+      display: none;
+    }
+    .stale-notice.visible { display: block; }
+
+    /* ── Narrative ──────────────────────────────────────────────────────────── */
+    .narrative {
+      padding: 20px 0 0;
+    }
+    .narrative p {
+      font-family: var(--font-serif);
+      font-size: 1rem;
+      line-height: 1.7;
+      color: var(--text);
+      text-wrap: pretty;
+    }
+
+    /* ── Section heading ────────────────────────────────────────────────────── */
+    .section-label {
+      font-family: var(--font-sans);
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: 10px;
+    }
+
+    /* ── Areas to watch ─────────────────────────────────────────────────────── */
+    .areas {
+      padding-top: 24px;
+    }
+    .area-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .area-item {
+      padding: 11px 0 11px 14px;
+      border-left: 2px solid var(--current-level-color, var(--c-severe));
+      font-family: var(--font-sans);
+      font-size: 0.9375rem;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+    }
+    .area-item:last-child { border-bottom: none; }
+
+    /* ── Flood advisory ─────────────────────────────────────────────────────── */
+    .flood-advisory {
+      background: var(--flood-bg);
+      border: 1px solid var(--flood-border);
+      border-radius: 4px;
+      padding: 14px 16px;
+      margin-top: 24px;
+      display: none;
+    }
+    .flood-advisory.visible { display: block; }
+    .flood-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .flood-icon {
+      font-size: 0.875rem;
+      line-height: 1;
+    }
+    .flood-title {
+      font-family: var(--font-sans);
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--flood-text);
+    }
+    .flood-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .flood-item {
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      color: var(--flood-text);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .flood-confidence {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.75;
+      white-space: nowrap;
+    }
+
+    /* ── Subscribe + social section ─────────────────────────────────────────── */
+    .sub-section {
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    .sub-count {
+      font-family: var(--font-sans);
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 14px;
+      min-height: 1.25rem;
+    }
+    .sub-count span {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .btn-row {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 4px;
+      font-family: var(--font-sans);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      text-align: center;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.985); }
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .btn-share {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-share:hover { opacity: 0.85; }
+    .btn-telegram {
+      background: #0088CC;
+      color: #FFFFFF;
+    }
+    .btn-telegram:hover { background: #007AB8; }
+    .btn-share-icon, .btn-tg-icon {
+      display: inline-block;
+      margin-right: 6px;
+      vertical-align: -1px;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────────────────── */
+    .site-footer {
+      margin-top: 32px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--text-faint);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .footer-left { line-height: 1.6; }
+    .api-link {
+      font-size: 0.6875rem;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+      color: var(--text-faint);
+    }
+    .api-link:hover { color: var(--accent); }
+
+    /* ── Loading shimmer ────────────────────────────────────────────────────── */
+    @keyframes shimmer {
+      0%   { opacity: 0.5; }
+      50%  { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+    .loading { animation: shimmer 1.4s ease-in-out infinite; }
+
+    /* ── Desktop centering spacer ───────────────────────────────────────────── */
+    @media (min-width: 600px) {
+      .page { padding-top: 32px; }
+      .badge-wrap { border-radius: 4px; overflow: hidden; margin: 0 0; }
+      .status-badge { padding: 36px 32px 30px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page" role="main">
+
+    <header class="site-header">
+      <div>
+        <div class="site-name">Lagos Traffic Intel</div>
+        <div class="site-tagline">Is it worth leaving now?</div>
+      </div>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
+        <span id="theme-icon">☀</span>
+      </button>
+    </header>
+
+    <div class="badge-wrap">
+      <div class="status-badge" id="status-badge" role="status" aria-live="polite">
+        <div class="badge-level" id="badge-level">SEVERE</div>
+        <div class="badge-score" id="badge-score">9 / 10</div>
+      </div>
+    </div>
+
+    <div class="date-row">
+      <div class="date-label" id="date-label">Monday, July 7</div>
+      <div class="updated-time" id="updated-time">Updated 5:47 AM</div>
+    </div>
+
+    <div class="stale-notice" id="stale-notice">
+      Data may be outdated — next update at 5:45 AM tomorrow.
+    </div>
+
+    <section class="narrative">
+      <p id="narrative-text" class="loading">
+        Expect a rough Monday morning across Lagos. The overnight rain has saturated drains along major corridors — Third Mainland Bridge, Lekki-Epe, and Oshodi-Apapa will all see significant delays. Leave earlier than usual or wait until mid-morning.
+      </p>
+    </section>
+
+    <section class="areas" id="areas-section">
+      <div class="section-label">Areas to watch</div>
+      <ul class="area-list" id="area-list">
+        <li class="area-item">Third Mainland Bridge / Iyana-Oworo approach</li>
+        <li class="area-item">Lekki-Epe Expressway (Sangotedo–Ajah)</li>
+        <li class="area-item">Oshodi-Apapa Expressway</li>
+      </ul>
+    </section>
+
+    <div class="flood-advisory" id="flood-advisory" role="alert">
+      <div class="flood-header">
+        <span class="flood-icon">⚠</span>
+        <span class="flood-title">Flood Advisory</span>
+      </div>
+      <ul class="flood-list" id="flood-list"></ul>
+    </div>
+
+    <div class="sub-section">
+      <div class="sub-count" id="sub-count">
+        <span id="sub-number">—</span> people subscribed
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-share" id="share-btn" onclick="shareAlert()">
+          <span class="btn-share-icon">↑</span> Share today's alert
+        </button>
+        <a class="btn btn-telegram" href="https://t.me/lagostrafficintel" target="_blank" rel="noopener">
+          <span class="btn-tg-icon">✈</span> Get daily alerts on Telegram
+        </a>
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      <div class="footer-left">
+        Lagos Traffic Intel &nbsp;·&nbsp; Updated 5:45 AM daily
+      </div>
+      <a class="api-link" href="/api/today" target="_blank" rel="noopener">API ↗</a>
+    </footer>
+
+  </main>
+
+  <script>
+    // ── Level config ──────────────────────────────────────────────────────────
+    const LEVELS = {
+      Light:    { color: '#16A34A', spacing: '0.04em',  score_suffix: '/ 10' },
+      Moderate: { color: '#B45309', spacing: '0.02em',  score_suffix: '/ 10' },
+      Heavy:    { color: '#C2410C', spacing: '0em',     score_suffix: '/ 10' },
+      Severe:   { color: '#B91C1C', spacing: '-0.02em', score_suffix: '/ 10' },
+      Gridlock: { color: '#7F1D1D', spacing: '-0.03em', score_suffix: '/ 10' },
+    };
+
+    // ── Demo fallback (shown when API is unreachable) ─────────────────────────
+    const DEMO = {
+      traffic: {
+        level: 'Severe',
+        score: 9,
+        hex_color: '#B91C1C',
+        narrative: 'Expect a difficult Monday morning across Lagos. The overnight rain has saturated drains along all major corridors — Third Mainland Bridge, Lekki-Epe Expressway, and Oshodi-Apapa Expressway will all see heavy delays. Leave at least 30 minutes earlier than usual, or wait until mid-morning.'
+      },
+      date_label: 'Monday, July 7',
+      areas_to_watch: [
+        'Third Mainland Bridge / Iyana-Oworo approach',
+        'Lekki-Epe Expressway (Sangotedo–Ajah)',
+        'Oshodi-Apapa Expressway'
+      ],
+      flood_zones: [
+        { name: 'Oshodi-Apapa / Apakun Bridge underpass', confidence: 'HIGH' },
+        { name: 'Iyana-Oworo / Third Mainland Bridge approach', confidence: 'HIGH' }
+      ],
+      generated_at: new Date().toISOString(),
+      meta: { is_stale: false }
+    };
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    let currentLevel = 'Severe';
+    let usingDemo    = false;
+
+    // ── DOM helpers ───────────────────────────────────────────────────────────
+    const $  = id => document.getElementById(id);
+    const el = (tag, cls, html) => {
+      const e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (html !== undefined) e.innerHTML = html;
+      return e;
+    };
+
+    // ── Render ────────────────────────────────────────────────────────────────
+    function render(data) {
+      const t = data.traffic || {};
+      const level = t.level || 'Moderate';
+      const cfg   = LEVELS[level] || LEVELS.Moderate;
+      currentLevel = level;
+
+      // Badge
+      const badge = $('status-badge');
+      badge.style.background = cfg.color;
+      $('badge-level').textContent  = level.toUpperCase();
+      $('badge-level').style.letterSpacing = cfg.spacing;
+      $('badge-score').textContent  = `${t.score || '—'} / 10`;
+      badge.style.setProperty('--current-level-color', cfg.color);
+      document.documentElement.style.setProperty('--current-level-color', cfg.color);
+
+      // Area list border color
+      document.querySelectorAll('.area-item').forEach(li => {
+        li.style.borderLeftColor = cfg.color;
+      });
+
+      // Date row
+      $('date-label').textContent = data.date_label || '';
+      if (data.generated_at) {
+        try {
+          const d = new Date(data.generated_at);
+          const timeStr = d.toLocaleTimeString('en-NG', {
+            hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Lagos'
+          });
+          $('updated-time').textContent = `Updated ${timeStr}`;
+        } catch(_) {}
+      }
+
+      // Stale
+      if (data.meta && data.meta.is_stale) {
+        $('stale-notice').classList.add('visible');
+      } else {
+        $('stale-notice').classList.remove('visible');
+      }
+
+      // Narrative
+      const narrative = $('narrative-text');
+      narrative.textContent = t.narrative || '';
+      narrative.classList.remove('loading');
+
+      // Areas
+      const areas = data.areas_to_watch || [];
+      const list  = $('area-list');
+      list.innerHTML = '';
+      areas.forEach(area => {
+        const li = el('li', 'area-item', '');
+        li.textContent = area;
+        li.style.borderLeftColor = cfg.color;
+        list.appendChild(li);
+      });
+      if (areas.length === 0) {
+        $('areas-section').style.display = 'none';
+      } else {
+        $('areas-section').style.display = '';
+      }
+
+      // Flood advisory
+      const zones    = data.flood_zones || [];
+      const floodDiv = $('flood-advisory');
+      const floodList = $('flood-list');
+      floodList.innerHTML = '';
+      if (zones.length > 0) {
+        floodDiv.classList.add('visible');
+        zones.slice(0, 5).forEach(z => {
+          const li = el('li', 'flood-item', '');
+          const nameSpan = el('span', '', '');
+          nameSpan.textContent = z.name;
+          const confSpan = el('span', 'flood-confidence', '');
+          confSpan.textContent = z.confidence;
+          li.appendChild(nameSpan);
+          li.appendChild(confSpan);
+          floodList.appendChild(li);
+        });
+      } else {
+        floodDiv.classList.remove('visible');
+      }
+
+      // Theme color meta tag
+      $('theme-color-meta').content = cfg.color;
+    }
+
+    // ── Fetch today ───────────────────────────────────────────────────────────
+    async function fetchToday() {
+      try {
+        const res = await fetch('/api/today', { cache: 'no-store' });
+        if (!res.ok) throw new Error(res.status);
+        const data = await res.json();
+        usingDemo = false;
+        render(data);
+      } catch(_) {
+        if (!usingDemo) {
+          usingDemo = true;
+          render(DEMO);
+        }
+      }
+    }
+
+    // ── Fetch subscriber count ────────────────────────────────────────────────
+    async function fetchSubscribers() {
+      try {
+        const res = await fetch('/api/subscribers');
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (data.count && data.count > 0) {
+          $('sub-number').textContent = data.count.toLocaleString('en-NG');
+        } else {
+          $('sub-count').innerHTML = 'Join the community on Telegram';
+        }
+      } catch(_) {
+        $('sub-count').innerHTML = 'Join the community on Telegram';
+      }
+    }
+
+    // ── Share ─────────────────────────────────────────────────────────────────
+    async function shareAlert() {
+      const badge = $('badge-level').textContent || '';
+      const areas = [...document.querySelectorAll('.area-item')]
+        .slice(0, 2)
+        .map(li => li.textContent.trim());
+      const areaStr = areas.length ? ` — ${areas[0]}` : '';
+      const url  = window.location.href.split('?')[0];
+      const text = `Lagos traffic is ${badge} this morning${areaStr}. Check: ${url}`;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: 'Lagos Traffic Intel', text, url });
+          return;
+        } catch(_) {}
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        const btn = $('share-btn');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<span class="btn-share-icon">✓</span> Copied to clipboard';
+        setTimeout(() => { btn.innerHTML = orig; }, 2200);
+      } catch(_) {}
+    }
+
+    // ── Theme toggle ──────────────────────────────────────────────────────────
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      $('theme-icon').textContent = theme === 'dark' ? '☽' : '☀';
+      localStorage.setItem('lti_theme', theme);
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem('lti_theme');
+      if (saved) {
+        applyTheme(saved);
+      } else {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyTheme(prefersDark ? 'dark' : 'light');
+      }
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    initTheme();
+    fetchToday();
+    fetchSubscribers();
+
+    // Poll every 5 minutes
+    setInterval(fetchToday, 5 * 60 * 1000);
+    // Refresh subscribers every 6 hours (matches server cache)
+    setInterval(fetchSubscribers, 6 * 60 * 60 * 1000);
+  </script>
+</body>
+</html>
