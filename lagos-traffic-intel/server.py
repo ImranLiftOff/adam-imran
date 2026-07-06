@@ -68,6 +68,13 @@ async def health():
     }
 
 
+@app.post("/run")
+async def trigger_run():
+    """Manually trigger the pipeline. Used for first-run and debugging."""
+    asyncio.create_task(run_pipeline())
+    return {"ok": True, "message": "Pipeline triggered. Check /api/today in ~30 seconds."}
+
+
 @app.get("/api/today")
 async def api_today():
     today = read_today()
