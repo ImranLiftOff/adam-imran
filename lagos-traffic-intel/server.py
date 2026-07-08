@@ -5,6 +5,7 @@ APScheduler runs the pipeline at 5:45 AM and 4:00 PM WAT daily inside the server
 
 import asyncio
 import os
+import subprocess
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -21,6 +22,32 @@ from storage import mark_stale, read_history, read_today
 from telegram import get_subscriber_count
 
 LAGOS_TZ = pytz.timezone("Africa/Lagos")
+
+
+def _detect_deploy_version() -> str:
+    """
+    Short commit SHA for whatever code this process is actually running.
+    Lets /health be checked after a push to confirm the new deploy is live
+    without ever touching /run — that's what should have been used instead
+    of polling the pipeline-triggering endpoint (see 2026-07-08 incident:
+    polling /run?dry_run=true before the deploy landed silently ran the real
+    pipeline against the live Telegram channel 17 times, since the old code
+    didn't recognize that query param).
+    """
+    railway_sha = os.getenv("RAILWAY_GIT_COMMIT_SHA", "")
+    if railway_sha:
+        return railway_sha[:8]
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+    except Exception:
+        return "unknown"
+
+
+DEPLOY_VERSION = _detect_deploy_version()
 
 # Cached subscriber count — refreshed every 6 hours to avoid hitting Telegram on every request
 _subscriber_cache: dict = {"total": None, "new_today": None, "fetched_at": None}
@@ -66,6 +93,7 @@ async def health():
     today = read_today()
     return {
         "ok": True,
+        "version": DEPLOY_VERSION,
         "last_run": today.get("meta", {}).get("last_successful_run") if today else None,
         "is_stale": mark_stale(today),
     }
