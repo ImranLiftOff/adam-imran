@@ -33,7 +33,13 @@ OPEN_METEO_URL = (
 
 # ── File paths ─────────────────────────────────────────────────────────────────
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR    = os.path.join(BASE_DIR, "data")
+# On Railway, RAILWAY_VOLUME_MOUNT_PATH points at the persistent volume
+# attached to this service (added 2026-07-09), so today.json/history.json/
+# seen_posts.json/live_posts.json survive redeploys instead of resetting to
+# empty every time (Railway's container filesystem itself is ephemeral).
+# Locally, that env var isn't set, so this falls back to the same relative
+# ./data path as before.
+DATA_DIR    = os.getenv("RAILWAY_VOLUME_MOUNT_PATH") or os.path.join(BASE_DIR, "data")
 STATIC_DIR  = os.path.join(BASE_DIR, "static")
 LOG_DIR     = os.path.join(BASE_DIR, "logs")
 TODAY_JSON  = os.path.join(DATA_DIR, "today.json")
