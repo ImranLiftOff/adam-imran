@@ -1,6 +1,6 @@
 """
 FastAPI web server. Entry point for Railway.
-APScheduler runs the pipeline at 5:45 AM and 4:00 PM WAT daily inside the server process.
+APScheduler runs the pipeline at 6:30 AM, 4:00 PM, and 8:00 PM WAT daily inside the server process.
 """
 
 import asyncio
@@ -64,8 +64,9 @@ async def _refresh_subscribers():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     scheduler = AsyncIOScheduler(timezone=LAGOS_TZ)
-    scheduler.add_job(run_pipeline, "cron", hour=5, minute=45, id="morning_pipeline")
-    scheduler.add_job(run_pipeline, "cron", hour=16, minute=0, id="evening_pipeline")
+    scheduler.add_job(run_pipeline, "cron", hour=6, minute=30, id="morning_pipeline")
+    scheduler.add_job(run_pipeline, "cron", hour=16, minute=0, id="afternoon_pipeline")
+    scheduler.add_job(run_pipeline, "cron", hour=20, minute=0, id="evening_pipeline")
     scheduler.add_job(_refresh_subscribers, "interval", hours=6, id="subscriber_refresh")
     scheduler.start()
 

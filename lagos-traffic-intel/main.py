@@ -3,7 +3,7 @@ Pipeline orchestrator. Run directly for manual/one-off execution:
   python main.py              # real run, posts to the live Telegram channel
   python main.py --dry-run    # same pipeline, skips the Telegram send (use this for testing)
 
-Called by APScheduler in server.py at 5:45 AM and 4:00 PM WAT daily.
+Called by APScheduler in server.py at 6:30 AM, 4:00 PM, and 8:00 PM WAT daily.
 """
 
 import asyncio

@@ -10,9 +10,9 @@ from config import (
 
 MAX_HISTORY = 30
 
-# Covers the ~10h15m gap between the two daily runs plus slack for a late or
-# missed run, so a post stays "seen" across one full day/night cycle but
-# doesn't linger forever.
+# Covers the ~10h30m longest gap between the three daily runs (20:00 to
+# 6:30) plus slack for a late or missed run, so a post stays "seen" across
+# one full day/night cycle but doesn't linger forever.
 SEEN_POSTS_RETENTION_HOURS = 30
 
 
@@ -141,7 +141,7 @@ def filter_new_posts(posts: list[dict]) -> tuple[list[dict], list[dict]]:
     return new_posts, dup_posts
 
 
-STALE_THRESHOLD_HOURS = 15  # pipeline runs at 5:45 and 16:00 WAT — max normal gap is ~13h45m
+STALE_THRESHOLD_HOURS = 12  # pipeline runs at 6:30, 16:00, and 20:00 WAT — max normal gap is ~10h30m (20:00 to 6:30)
 
 
 def mark_stale(today_data: dict | None) -> bool:
